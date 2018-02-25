@@ -16,6 +16,8 @@ import sys
 from pyblake2 import blake2b
 from bitstring import BitArray
 from pure25519 import ed25519_oop as ed25519
+from timeit import Timer
+import random
 
 def xrb_account(address):
 	# Given a string containing an XRB address, confirm validity and provide resulting hex address
@@ -150,9 +152,9 @@ times = []
 print("Profiling PoW...")
 for x in range(1,11):
 	print("Round "+str(x)+": Generating PoW...")
-	start = timer()
+	start = Timer()
 	pow = pow_generate(block)
-	end = timer()
+	end = Timer()
 	elapsed = int(end-start)
 	times.append(elapsed)
 	print("Elapsed time: "+str(elapsed)+" seconds")
