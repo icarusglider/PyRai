@@ -47,8 +47,8 @@ def xrb_account(address):
 		h = blake2b(digest_size=5)
 		h.update(number_l.bytes)
 		if (h.hexdigest() == check_l.hex):return result
-		else: return False
-	else: return False
+		return False
+	return False
 	
 def account_xrb(account):
 	# Given a string containing a hex address, encode to public address format with checksum
@@ -97,7 +97,7 @@ def seed_account(seed, index):
 
 def pow_threshold(check):
 	if check > b'\xFF\xFF\xFF\xC0\x00\x00\x00\x00': return True
-	else: return False
+	return False
 	
 def pow_validate(pow, hash):
 	pow_data = bytearray.fromhex(pow)
@@ -118,7 +118,7 @@ def pow_generate(hash):
 	#time.sleep(5)
 	test = False
 	inc = 0
-	while test == False:
+	while not test:
 			inc += 1
 			random_bytes = bytearray((random.getrandbits(8) for i in range(8)))		# generate random array of bytes
 			for r in range(0,256):
@@ -133,49 +133,52 @@ def pow_generate(hash):
 		
 	random_bytes.reverse()
 	return random_bytes.hex()	
-	
-seed = "9F1D53E732E48F25F94711D5B22086778278624F715D9B2BEC8FB81134E7C904"	
-priv_key, pub_key = seed_account(seed,1)
 
-#{
-#    "type": "send",
-#    "previous": "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712",
-#    "destination": "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1",
-#    "balance": "000000FC6F7C40458122964CFFFFFF9C",
-#    "work": "266063092558d903",
-#    "signature": "17D6EAF3438CC592333594C96D023D742F7F38669F2DA6A763877F6958B3A76572169652E55D05E0759E114252765DB9E0F3BF55FA89F28E300CAF829C89250E"
-#}
+def test():
+	seed = "9F1D53E732E48F25F94711D5B22086778278624F715D9B2BEC8FB81134E7C904"	
+	priv_key, pub_key = seed_account(seed,1)
 
-block = "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712"
-times = []
+	#{
+	#    "type": "send",
+	#    "previous": "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712",
+	#    "destination": "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1",
+	#    "balance": "000000FC6F7C40458122964CFFFFFF9C",
+	#    "work": "266063092558d903",
+	#    "signature": "17D6EAF3438CC592333594C96D023D742F7F38669F2DA6A763877F6958B3A76572169652E55D05E0759E114252765DB9E0F3BF55FA89F28E300CAF829C89250E"
+	#}
 
-print("Profiling PoW...")
-for x in range(1,11):
-	print("Round "+str(x)+": Generating PoW...")
-	start = Timer()
-	pow = pow_generate(block)
-	end = Timer()
-	elapsed = int(end-start)
-	times.append(elapsed)
-	print("Elapsed time: "+str(elapsed)+" seconds")
-	print("Valid: "+str(pow_validate(pow,block))+" Value: "+pow)
+	block = "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712"
+	times = []
 
-print("Average elapsed time: "+str(sum(times)/len(times))+" seconds")
+	print("Profiling PoW...")
+	for x in range(1,11):
+		print("Round "+str(x)+": Generating PoW...")
+		start = Timer()
+		pow = pow_generate(block)
+		end = Timer()
+		elapsed = int(end-start)
+		times.append(elapsed)
+		print("Elapsed time: "+str(elapsed)+" seconds")
+		print("Valid: "+str(pow_validate(pow,block))+" Value: "+pow)
 
-# send block
-bh = blake2b(digest_size=32)
+	print("Average elapsed time: "+str(sum(times)/len(times))+" seconds")
 
-bh.update(BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").bytes)					# previous block
-print("Previous  ",BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").hex)
+	# send block
+	bh = blake2b(digest_size=32)
 
-bh.update(BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).bytes)		# destination address
-print("Dest      ",BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).hex)
+	bh.update(BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").bytes)					# previous block
+	print("Previous  ",BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").hex)
 
-bh.update(BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").bytes)													# balance
-print("Balance   ",BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").hex)
+	bh.update(BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).bytes)		# destination address
+	print("Dest      ",BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).hex)
 
-print("Hash      ",bh.hexdigest())																				
+	bh.update(BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").bytes)													# balance
+	print("Balance   ",BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").hex)
 
-sig = ed25519.SigningKey(priv_key+pub_key).sign(bh.digest())														# work is not included in signature
-print("Signature ",sig.hex())
+	print("Hash      ",bh.hexdigest())																				
 
+	sig = ed25519.SigningKey(priv_key+pub_key).sign(bh.digest())														# work is not included in signature
+	print("Signature ",sig.hex())
+
+if __name__ == '__main__':
+	test()
