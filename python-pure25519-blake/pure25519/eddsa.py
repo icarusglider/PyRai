@@ -3,11 +3,10 @@ from pure25519.basic import (bytes_to_clamped_scalar,
                              bytes_to_scalar, scalar_to_bytes,
                              bytes_to_element, Base)
 import hashlib, binascii
-from pyblake2 import blake2b
 
 def H(m):
     #return hashlib.sha512(m).digest()
-	return blake2b(m).digest()
+	return hashlib.blake2b(m).digest()
 
 def publickey(seed):
     # turn first half of SHA512(seed) into scalar, then into point
