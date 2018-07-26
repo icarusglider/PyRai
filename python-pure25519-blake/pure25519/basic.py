@@ -1,5 +1,4 @@
 import binascii, hashlib, itertools
-from pyblake2 import blake2b
 
 Q = 2**255 - 19
 L = 2**252 + 27742317777372353535851937790883648493
@@ -166,7 +165,7 @@ def random_scalar(entropy_f): # 0..L-1 inclusive
 
 def password_to_scalar(pw):
     #oversized = hashlib.sha512(pw).digest()
-    oversized = blake2b(pw).digest()
+    oversized = hashlib.blake2b(pw).digest()
     return int(binascii.hexlify(oversized), 16) % L
 
 def scalar_to_bytes(y):

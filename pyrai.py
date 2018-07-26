@@ -13,7 +13,7 @@
 #}
 
 import sys
-from pyblake2 import blake2b
+from hashlib import blake2b
 from bitstring import BitArray
 from pure25519 import ed25519_oop as ed25519
 from timeit import Timer
@@ -137,18 +137,34 @@ def pow_generate(hash):
 def test():
 	seed = "9F1D53E732E48F25F94711D5B22086778278624F715D9B2BEC8FB81134E7C904"	
 	priv_key, pub_key = seed_account(seed,1)
+	acc = account_xrb(pub_key.hex())
 
 	#{
-	#    "type": "send",
+	#    "type": "state",
+	#    "account": "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1",
 	#    "previous": "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712",
-	#    "destination": "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1",
+	#    "representative": "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1",
 	#    "balance": "000000FC6F7C40458122964CFFFFFF9C",
+	#    "link": "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712",
 	#    "work": "266063092558d903",
 	#    "signature": "17D6EAF3438CC592333594C96D023D742F7F38669F2DA6A763877F6958B3A76572169652E55D05E0759E114252765DB9E0F3BF55FA89F28E300CAF829C89250E"
 	#}
 
+	action="receive"
 	block = "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712"
+	rep = "xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1"
+	bal = 1 # balance after send/receive
 	times = []
+
+	if action=="send":
+		link = xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1") # destination address
+		print("sending nano")
+	elif action=="receive" or action=="open":
+		link = "C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712" # send block hash
+		print("receiving nano")
+	elif action=="change":
+		link = "0000000000000000000000000000000000000000000000000000000000000000"
+		print("changing representative")
 
 	print("Profiling PoW...")
 	for x in range(1,11):
@@ -163,22 +179,32 @@ def test():
 
 	print("Average elapsed time: "+str(sum(times)/len(times))+" seconds")
 
-	# send block
 	bh = blake2b(digest_size=32)
 
-	bh.update(BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").bytes)					# previous block
-	print("Previous  ",BitArray(hex="C8E5B875778702445B25657276ABC56AA9910B283537CA438B2CC59B0CF93712").hex)
+	bh.update(BitArray(hex="0000000000000000000000000000000000000000000000000000000000000006").bytes) # preamble
 
-	bh.update(BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).bytes)		# destination address
-	print("Dest      ",BitArray(hex=xrb_account("xrb_34bmpi65zr967cdzy4uy4twu7mqs9nrm53r1penffmuex6ruqy8nxp7ms1h1")).hex)
+	bh.update(BitArray(hex=xrb_account(acc)).bytes) # account
+	print("Account         ",acc)
 
-	bh.update(BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").bytes)													# balance
-	print("Balance   ",BitArray(hex="000000FC6F7C40458122964CFFFFFF9C").hex)
+	bh.update(BitArray(hex=block).bytes)	# previous block
+	print("Previous        ",block)
 
-	print("Hash      ",bh.hexdigest())																				
+	bh.update(BitArray(hex=xrb_account(rep)).bytes) # representative
+	print("Representative  ",rep)
+
+	bh.update(BitArray(hex=format(bal,'032x')).bytes) # final balance
+	print("Balance         ",bal)
+
+	bh.update(BitArray(hex=link).bytes) # link
+	if action=="send":
+		print("Send to         ",account_xrb(link))
+	elif action=="receive" or action=="open":
+		print("Receive         ",link)
+
+	print("Hash            ",bh.hexdigest())																				
 
 	sig = ed25519.SigningKey(priv_key+pub_key).sign(bh.digest())														# work is not included in signature
-	print("Signature ",sig.hex())
+	print("Signature       ",sig.hex())
 
 if __name__ == '__main__':
 	test()
