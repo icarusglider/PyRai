@@ -13,11 +13,17 @@
 #}
 
 import sys
+import random
+import base64
+import binascii
 from pyblake2 import blake2b
 from bitstring import BitArray
 from pure25519 import ed25519_oop as ed25519
 from timeit import Timer
-import random
+
+# set global translation maps for base32
+RFC_3548 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+ENCODING = b"13456789abcdefghijkmnopqrstuwxyz"
 
 def xrb_account(address):
 	# Given a string containing an XRB address, confirm validity and provide resulting hex address
@@ -52,32 +58,14 @@ def xrb_account(address):
 	
 def account_xrb(account):
 	# Given a string containing a hex address, encode to public address format with checksum
-	account_map = "13456789abcdefghijkmnopqrstuwxyz"					# each index = binary value, account_lookup['00001'] == '3'
-	account_lookup = {}
-	for i in range(0,32):												# populate lookup index for binary string to base-32 string character
-		account_lookup[BitArray(uint=i,length=5).bin] = account_map[i]
-	
-	account = BitArray(hex=account)										# hex string > binary
-		
-	# get checksum
-	h = blake2b(digest_size=5)								
-	h.update(account.bytes)									
-	checksum = BitArray(hex=h.hexdigest())					
-		
-	# encode checksum
-	checksum.byteswap()													# swap bytes for compatibility with original implementation
-	encode_check = ''
-	for x in range(0,int(len(checksum.bin)/5)):			
-			encode_check += account_lookup[checksum.bin[x*5:x*5+5]]		# each 5-bit sequence = a base-32 character from account_map
-	
-	# encode account
-	encode_account = ''
-	while len(account.bin) < 260:										# pad our binary value so it is 260 bits long before conversion (first value can only be 00000 '1' or 00001 '3')
-		account = '0b0' + account
-	for x in range(0,int(len(account.bin)/5)):
-			encode_account += account_lookup[account.bin[x*5:x*5+5]]	# each 5-bit sequence = a base-32 character from account_map
-		
-	return 'xrb_'+encode_account+encode_check							# build final address string
+    account = account.encode()
+    h = blake2b(digest_size=5)
+    h.update(account)
+    checksum = h.digest()
+    account = b'\x00\x00\x00'+account+checksum[::-1]                                    # prefix account to make it even length for base32, add checksum in reverse byte order
+    encode_account = base64.b32encode(account)                                          # use the optimized base32 lib to speed this up
+    encode_account = encode_account.translate(bytes.maketrans(RFC_3548,ENCODING))[4:]   # simply translate the result from RFC3548 to Nano's encoding, snip off the leading useless bytes
+    return 'xrb_'+encode_account.decode()                                               # add prefix and return
 
 def private_public(private):
 	return ed25519.SigningKey(private).get_verifying_key().to_bytes()
