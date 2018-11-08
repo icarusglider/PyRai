@@ -57,7 +57,8 @@ def xrb_account(address):
 	return False
 	
 def account_xrb(account):
-	# Given a string containing a hex address, encode to public address format with checksum
+	# Given a string containing a public key, encode to public address format with checksum
+    # ~50x faster than old method
     account = account.encode()
     h = blake2b(digest_size=5)
     h.update(account)
@@ -66,6 +67,18 @@ def account_xrb(account):
     encode_account = base64.b32encode(account)                                          # use the optimized base32 lib to speed this up
     encode_account = encode_account.translate(bytes.maketrans(RFC_3548,ENCODING))[4:]   # simply translate the result from RFC3548 to Nano's encoding, snip off the leading useless bytes
     return 'xrb_'+encode_account.decode()                                               # add prefix and return
+    
+def account_xrb_bytes(account):
+	# Given a bytestring containing a public key, encode to public address format with checksum
+    # fastest when working directly with the protocol/raw blocks
+    # ~80x faster than old method
+    h = blake2b(digest_size=5)
+    h.update(account)
+    checksum = h.digest()
+    account = b'\x00\x00\x00'+account+checksum[::-1]                                    # prefix account to make it even length for base32, add checksum in reverse byte order
+    encode_account = base64.b32encode(account)                                          # use the optimized base32 lib to speed this up
+    encode_account = encode_account.translate(bytes.maketrans(RFC_3548,ENCODING))[4:]   # simply translate the result from RFC3548 to Nano's encoding, snip off the leading useless bytes
+    return b'xrb_'+encode_account                                                       # add prefix and return
 
 def private_public(private):
 	return ed25519.SigningKey(private).get_verifying_key().to_bytes()
